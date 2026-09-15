@@ -1,0 +1,5 @@
+export enum FulfillmentType {
+  DINE_IN = 'DINE_IN',
+  PICKUP = 'PICKUP',
+  DELIVERY_BY_AGREEMENT = 'DELIVERY_BY_AGREEMENT',
+}
