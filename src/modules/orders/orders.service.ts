@@ -38,7 +38,7 @@ export class OrdersService {
 
     private readonly businessesService: BusinessesService,
     private readonly productsService: ProductsService,
-  ) {}
+  ) { }
 
   async create(
     createOrderDto: CreateOrderDto,
@@ -399,7 +399,7 @@ export class OrdersService {
 
     if (
       fulfillmentType ===
-        FulfillmentType.DELIVERY_BY_AGREEMENT &&
+      FulfillmentType.DELIVERY_BY_AGREEMENT &&
       !settings.deliveryByAgreementEnabled
     ) {
       throw new BadRequestException(
@@ -430,6 +430,71 @@ export class OrdersService {
       .exec();
 
     return counter.sequence;
+  }
+
+  async updateStatus(
+    id: string,
+    newStatus: OrderStatus,
+    changedBy?: string,
+  ): Promise<OrderDocument> {
+    const order = await this.findOne(id);
+
+    const allowedTransitions: Record<
+      OrderStatus,
+      OrderStatus[]
+    > = {
+      [OrderStatus.PENDING]: [
+        OrderStatus.CONFIRMED,
+        OrderStatus.CANCELLED,
+      ],
+      [OrderStatus.CONFIRMED]: [
+        OrderStatus.PREPARING,
+        OrderStatus.CANCELLED,
+      ],
+      [OrderStatus.PREPARING]: [
+        OrderStatus.READY,
+        OrderStatus.CANCELLED,
+      ],
+      [OrderStatus.READY]: [
+        OrderStatus.COMPLETED,
+        OrderStatus.CANCELLED,
+      ],
+      [OrderStatus.COMPLETED]: [],
+      [OrderStatus.CANCELLED]: [],
+    };
+
+    const allowedStatuses =
+      allowedTransitions[order.status];
+
+    if (!allowedStatuses.includes(newStatus)) {
+      throw new BadRequestException(
+        `No se puede cambiar el pedido de ${order.status} a ${newStatus}`,
+      );
+    }
+
+    order.status = newStatus;
+
+    order.statusHistory.push({
+      status: newStatus,
+      changedAt: new Date(),
+      ...(changedBy && {
+        changedBy: new Types.ObjectId(changedBy),
+      }),
+    });
+
+    if (newStatus === OrderStatus.CONFIRMED) {
+      order.confirmedAt = new Date();
+    }
+
+    if (newStatus === OrderStatus.COMPLETED) {
+      order.completedAt = new Date();
+    }
+
+    if (newStatus === OrderStatus.CANCELLED) {
+      order.cancelledAt = new Date();
+    }
+
+    return order.save();
   }
 
   private buildWhatsappMessage(

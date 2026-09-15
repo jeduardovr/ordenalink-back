@@ -77,14 +77,22 @@ export class LoyaltySettings {
   @Prop({ default: false })
   enabled!: boolean;
 
-  @Prop({ default: 10, min: 1 })
+  @Prop({
+    default: 10,
+    min: 1,
+  })
   stampsRequired!: number;
 
-  @Prop({ default: 'Producto gratis' })
+  @Prop({
+    default: 'Producto gratis',
+  })
   rewardDescription!: string;
 
-  @Prop({ default: 0, min: 0 })
-  minimumOrderAmount!: number;
+  @Prop({
+    default: 0,
+    min: 0,
+  })
+  minimumOrderAmountInCents!: number;
 }
 
 export const LoyaltySettingsSchema =
@@ -106,7 +114,6 @@ export class Business {
 
   @Prop({
     required: true,
-    unique: true,
     lowercase: true,
     trim: true,
   })

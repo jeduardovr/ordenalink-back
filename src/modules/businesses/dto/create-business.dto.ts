@@ -86,7 +86,7 @@ export class LoyaltySettingsDto {
   enabled?: boolean;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(1)
   stampsRequired?: number;
 
@@ -95,9 +95,9 @@ export class LoyaltySettingsDto {
   rewardDescription?: string;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(0)
-  minimumOrderAmount?: number;
+  minimumOrderAmountInCents?: number;
 }
 
 export class CreateBusinessDto {
