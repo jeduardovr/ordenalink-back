@@ -6,6 +6,7 @@ import {
 
 import { AuthService } from './auth.service';
 import { GoogleAuthDto } from './dto/google-auth.dto';
+import { StaffLoginDto } from './dto/staff-login.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -13,12 +14,21 @@ export class AuthController {
     private readonly authService: AuthService,
   ) {}
 
-  @Post('google')
-  loginWithGoogle(
+  @Post('customers/google')
+  loginCustomerWithGoogle(
     @Body() googleAuthDto: GoogleAuthDto,
   ) {
     return this.authService.loginWithGoogle(
       googleAuthDto.credential,
+    );
+  }
+
+  @Post('staff/login')
+  loginStaff(
+    @Body() staffLoginDto: StaffLoginDto,
+  ) {
+    return this.authService.loginStaff(
+      staffLoginDto,
     );
   }
 }

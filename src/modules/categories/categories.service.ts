@@ -23,13 +23,19 @@ export class CategoriesService {
 
   async create(
     createCategoryDto: CreateCategoryDto,
+    businessId: string,
   ): Promise<CategoryDocument> {
+    this.validateObjectId(businessId);
+
     try {
       return await this.categoryModel.create({
         ...createCategoryDto,
-        businessId: new Types.ObjectId(
-          createCategoryDto.businessId,
-        ),
+
+        /*
+         * Se coloca después del DTO para sobrescribir cualquier
+         * businessId enviado desde el frontend.
+         */
+        businessId: new Types.ObjectId(businessId),
       });
     } catch (error: unknown) {
       if (this.isDuplicateKeyError(error)) {
@@ -42,6 +48,9 @@ export class CategoriesService {
     }
   }
 
+  /*
+   * Consulta pública para construir el menú.
+   */
   async findByBusiness(
     businessId: string,
   ): Promise<CategoryDocument[]> {
@@ -59,7 +68,12 @@ export class CategoriesService {
       .exec();
   }
 
-  async findOne(id: string): Promise<CategoryDocument> {
+  /*
+   * Consulta pública individual.
+   */
+  async findOne(
+    id: string,
+  ): Promise<CategoryDocument> {
     this.validateObjectId(id);
 
     const category = await this.categoryModel
@@ -67,7 +81,9 @@ export class CategoriesService {
       .exec();
 
     if (!category) {
-      throw new NotFoundException('Categoría no encontrada');
+      throw new NotFoundException(
+        'Categoría no encontrada',
+      );
     }
 
     return category;
@@ -76,21 +92,29 @@ export class CategoriesService {
   async update(
     id: string,
     updateCategoryDto: UpdateCategoryDto,
+    businessId: string,
   ): Promise<CategoryDocument> {
     this.validateObjectId(id);
+    this.validateObjectId(businessId);
+
+    /*
+     * Evita que el negocio de una categoría pueda cambiarse
+     * aunque businessId venga dentro del body.
+     */
+    const updateData = {
+      ...updateCategoryDto,
+    };
+
+    delete updateData.businessId;
 
     try {
       const category = await this.categoryModel
-        .findByIdAndUpdate(
-          id,
+        .findOneAndUpdate(
           {
-            ...updateCategoryDto,
-            ...(updateCategoryDto.businessId && {
-              businessId: new Types.ObjectId(
-                updateCategoryDto.businessId,
-              ),
-            }),
+            _id: new Types.ObjectId(id),
+            businessId: new Types.ObjectId(businessId),
           },
+          updateData,
           {
             new: true,
             runValidators: true,
@@ -99,7 +123,9 @@ export class CategoriesService {
         .exec();
 
       if (!category) {
-        throw new NotFoundException('Categoría no encontrada');
+        throw new NotFoundException(
+          'Categoría no encontrada',
+        );
       }
 
       return category;
@@ -114,23 +140,33 @@ export class CategoriesService {
     }
   }
 
-  async remove(id: string): Promise<CategoryDocument> {
+  async remove(
+    id: string,
+    businessId: string,
+  ): Promise<CategoryDocument> {
     this.validateObjectId(id);
+    this.validateObjectId(businessId);
 
     const category = await this.categoryModel
-      .findByIdAndUpdate(
-        id,
+      .findOneAndUpdate(
+        {
+          _id: new Types.ObjectId(id),
+          businessId: new Types.ObjectId(businessId),
+        },
         {
           active: false,
         },
         {
           new: true,
+          runValidators: true,
         },
       )
       .exec();
 
     if (!category) {
-      throw new NotFoundException('Categoría no encontrada');
+      throw new NotFoundException(
+        'Categoría no encontrada',
+      );
     }
 
     return category;

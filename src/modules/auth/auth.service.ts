@@ -10,6 +10,10 @@ import {
 } from 'google-auth-library';
 
 import { UsersService } from '../users/users.service';
+import { compare } from 'bcryptjs';
+import { StaffUsersService } from '../staff-users/staff-users.service';
+import { BusinessesService } from '../businesses/businesses.service';
+import { StaffLoginDto } from './dto/staff-login.dto';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +21,8 @@ export class AuthService {
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly staffUsersService: StaffUsersService,
+    private readonly businessesService: BusinessesService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
@@ -73,7 +79,7 @@ export class AuthService {
 
     const accessToken = await this.jwtService.signAsync({
       sub: user._id.toString(),
-      role: user.role,
+      accountType: 'CUSTOMER',
     });
 
     return {
@@ -83,7 +89,65 @@ export class AuthService {
         name: user.name,
         email: user.email,
         avatarUrl: user.avatarUrl,
-        role: user.role,
+        accountType: 'CUSTOMER',
+      },
+    };
+  }
+
+  async loginStaff(staffLoginDto: StaffLoginDto) {
+    const business =
+      await this.businessesService.findBySlug(
+        staffLoginDto.businessSlug,
+      );
+
+    const staffUser =
+      await this.staffUsersService.findForAuthentication(
+        business._id.toString(),
+        staffLoginDto.username,
+      );
+
+    if (!staffUser) {
+      throw new UnauthorizedException(
+        'Negocio, usuario o contraseña incorrectos',
+      );
+    }
+
+    const passwordIsValid = await compare(
+      staffLoginDto.password,
+      staffUser.passwordHash,
+    );
+
+    if (!passwordIsValid) {
+      throw new UnauthorizedException(
+        'Negocio, usuario o contraseña incorrectos',
+      );
+    }
+
+    const accessToken = await this.jwtService.signAsync({
+      sub: staffUser._id.toString(),
+      accountType: 'STAFF',
+      businessId: business._id.toString(),
+      role: staffUser.role,
+    });
+
+    await this.staffUsersService.updateLastLogin(
+      staffUser._id.toString(),
+    );
+
+    return {
+      accessToken,
+      user: {
+        id: staffUser._id.toString(),
+        username: staffUser.username,
+        name: staffUser.name,
+        role: staffUser.role,
+        accountType: 'STAFF',
+      },
+      business: {
+        id: business._id.toString(),
+        name: business.name,
+        slug: business.slug,
+        logoUrl: business.logoUrl,
       },
     };
   }

@@ -26,20 +26,29 @@ export class ProductsService {
 
   async create(
     createProductDto: CreateProductDto,
+    businessId: string,
   ): Promise<ProductDocument> {
+    this.validateObjectId(businessId);
+
     await this.validateCategoryBelongsToBusiness(
       createProductDto.categoryId,
-      createProductDto.businessId,
+      businessId,
     );
 
-    this.validateProductConfiguration(createProductDto);
+    this.validateProductConfiguration(
+      createProductDto,
+    );
 
     try {
       return await this.productModel.create({
         ...createProductDto,
-        businessId: new Types.ObjectId(
-          createProductDto.businessId,
-        ),
+
+        /*
+         * Sobrescribe cualquier businessId recibido
+         * desde el body.
+         */
+        businessId: new Types.ObjectId(businessId),
+
         categoryId: new Types.ObjectId(
           createProductDto.categoryId,
         ),
@@ -93,7 +102,9 @@ export class ProductsService {
       .exec();
   }
 
-  async findOne(id: string): Promise<ProductDocument> {
+  async findOne(
+    id: string,
+  ): Promise<ProductDocument> {
     this.validateObjectId(id);
 
     const product = await this.productModel
@@ -101,7 +112,9 @@ export class ProductsService {
       .exec();
 
     if (!product) {
-      throw new NotFoundException('Producto no encontrado');
+      throw new NotFoundException(
+        'Producto no encontrado',
+      );
     }
 
     return product;
@@ -110,12 +123,16 @@ export class ProductsService {
   async update(
     id: string,
     updateProductDto: UpdateProductDto,
+    businessId: string,
   ): Promise<ProductDocument> {
-    const currentProduct = await this.findOne(id);
+    this.validateObjectId(id);
+    this.validateObjectId(businessId);
 
-    const businessId =
-      updateProductDto.businessId ??
-      currentProduct.businessId.toString();
+    const currentProduct =
+      await this.findOneForBusiness(
+        id,
+        businessId,
+      );
 
     const categoryId =
       updateProductDto.categoryId ??
@@ -130,21 +147,34 @@ export class ProductsService {
       priceInCents:
         updateProductDto.priceInCents ??
         currentProduct.priceInCents,
+
       promotionalPriceInCents:
         updateProductDto.promotionalPriceInCents ??
         currentProduct.promotionalPriceInCents,
+
       optionGroups:
         updateProductDto.optionGroups ??
         currentProduct.optionGroups,
     });
 
+    /*
+     * Evita que businessId pueda modificarse desde el body.
+     */
+    const updateData = {
+      ...updateProductDto,
+    };
+
+    delete updateData.businessId;
+
     try {
       const product = await this.productModel
-        .findByIdAndUpdate(
-          id,
+        .findOneAndUpdate(
           {
-            ...updateProductDto,
+            _id: new Types.ObjectId(id),
             businessId: new Types.ObjectId(businessId),
+          },
+          {
+            ...updateData,
             categoryId: new Types.ObjectId(categoryId),
           },
           {
@@ -155,7 +185,9 @@ export class ProductsService {
         .exec();
 
       if (!product) {
-        throw new NotFoundException('Producto no encontrado');
+        throw new NotFoundException(
+          'Producto no encontrado',
+        );
       }
 
       return product;
@@ -170,24 +202,57 @@ export class ProductsService {
     }
   }
 
-  async remove(id: string): Promise<ProductDocument> {
+  async remove(
+    id: string,
+    businessId: string,
+  ): Promise<ProductDocument> {
     this.validateObjectId(id);
+    this.validateObjectId(businessId);
 
     const product = await this.productModel
-      .findByIdAndUpdate(
-        id,
+      .findOneAndUpdate(
+        {
+          _id: new Types.ObjectId(id),
+          businessId: new Types.ObjectId(businessId),
+        },
         {
           active: false,
           available: false,
         },
         {
           new: true,
+          runValidators: true,
         },
       )
       .exec();
 
     if (!product) {
-      throw new NotFoundException('Producto no encontrado');
+      throw new NotFoundException(
+        'Producto no encontrado',
+      );
+    }
+
+    return product;
+  }
+
+  private async findOneForBusiness(
+    id: string,
+    businessId: string,
+  ): Promise<ProductDocument> {
+    this.validateObjectId(id);
+    this.validateObjectId(businessId);
+
+    const product = await this.productModel
+      .findOne({
+        _id: new Types.ObjectId(id),
+        businessId: new Types.ObjectId(businessId),
+      })
+      .exec();
+
+    if (!product) {
+      throw new NotFoundException(
+        'Producto no encontrado',
+      );
     }
 
     return product;
@@ -203,7 +268,9 @@ export class ProductsService {
     const category =
       await this.categoriesService.findOne(categoryId);
 
-    if (category.businessId.toString() !== businessId) {
+    if (
+      category.businessId.toString() !== businessId
+    ) {
       throw new BadRequestException(
         'La categoría no pertenece al negocio indicado',
       );
@@ -226,7 +293,8 @@ export class ProductsService {
   }): void {
     if (
       product.promotionalPriceInCents !== undefined &&
-      product.promotionalPriceInCents >= product.priceInCents
+      product.promotionalPriceInCents >=
+        product.priceInCents
     ) {
       throw new BadRequestException(
         'El precio promocional debe ser menor al precio normal',
@@ -234,8 +302,11 @@ export class ProductsService {
     }
 
     for (const group of product.optionGroups ?? []) {
-      const minimum = group.minSelections ?? 0;
-      const maximum = group.maxSelections ?? 1;
+      const minimum =
+        group.minSelections ?? 0;
+
+      const maximum =
+        group.maxSelections ?? 1;
 
       if (minimum > maximum) {
         throw new BadRequestException(

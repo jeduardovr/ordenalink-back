@@ -1,12 +1,22 @@
-import { Module } from '@nestjs/common';
+import {
+  forwardRef,
+  Module,
+} from '@nestjs/common';
+
 import { MongooseModule } from '@nestjs/mongoose';
 
 import {
   Business,
   BusinessSchema,
 } from './schemas/business.schema';
+
 import { BusinessesController } from './businesses.controller';
 import { BusinessesService } from './businesses.service';
+
+import { AuthModule } from '../auth/auth.module';
+
+import { StaffJwtGuard } from '../auth/guards/staff-jwt.guard';
+import { StaffRolesGuard } from '../auth/guards/staff-roles.guard';
 
 @Module({
   imports: [
@@ -16,9 +26,21 @@ import { BusinessesService } from './businesses.service';
         schema: BusinessSchema,
       },
     ]),
+    forwardRef(() => AuthModule),
   ],
-  controllers: [BusinessesController],
-  providers: [BusinessesService],
-  exports: [BusinessesService],
+
+  controllers: [
+    BusinessesController,
+  ],
+
+  providers: [
+    BusinessesService,
+    StaffJwtGuard,
+    StaffRolesGuard,
+  ],
+
+  exports: [
+    BusinessesService,
+  ],
 })
 export class BusinessesModule {}

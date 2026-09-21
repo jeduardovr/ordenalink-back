@@ -8,6 +8,11 @@ import { BusinessesModule } from './modules/businesses/businesses.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ProductsModule } from './modules/products/products.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { StaffUsersModule } from './modules/staff-users/staff-users.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { BusinessRegistrationController } from './modules/business-registration/business-registration.controller';
+import { BusinessRegistrationService } from './modules/business-registration/business-registration.service';
+import { BusinessRegistrationModule } from './modules/business-registration/business-registration.module';
 
 @Module({
   imports: [
@@ -28,6 +33,11 @@ import { OrdersModule } from './modules/orders/orders.module';
     CategoriesModule,
     ProductsModule,
     OrdersModule,
+    StaffUsersModule,
+    OnboardingModule,
+    BusinessRegistrationModule
   ],
+  controllers: [BusinessRegistrationController],
+  providers: [BusinessRegistrationService],
 })
 export class AppModule {}

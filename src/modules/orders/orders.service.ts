@@ -192,13 +192,24 @@ export class OrdersService {
       .exec();
   }
 
-  async findOne(id: string): Promise<OrderDocument> {
+  async findOne(
+    id: string,
+    businessId: string,
+  ): Promise<OrderDocument> {
     this.validateObjectId(id);
+    this.validateObjectId(businessId);
 
-    const order = await this.orderModel.findById(id).exec();
+    const order = await this.orderModel
+      .findOne({
+        _id: new Types.ObjectId(id),
+        businessId: new Types.ObjectId(businessId),
+      })
+      .exec();
 
     if (!order) {
-      throw new NotFoundException('Pedido no encontrado');
+      throw new NotFoundException(
+        'Pedido no encontrado',
+      );
     }
 
     return order;
@@ -435,9 +446,13 @@ export class OrdersService {
   async updateStatus(
     id: string,
     newStatus: OrderStatus,
-    changedBy?: string,
+    businessId: string,
+    changedBy: string,
   ): Promise<OrderDocument> {
-    const order = await this.findOne(id);
+    const order = await this.findOne(
+      id,
+      businessId,
+    );
 
     const allowedTransitions: Record<
       OrderStatus,
@@ -477,9 +492,7 @@ export class OrdersService {
     order.statusHistory.push({
       status: newStatus,
       changedAt: new Date(),
-      ...(changedBy && {
-        changedBy: new Types.ObjectId(changedBy),
-      }),
+      changedBy: new Types.ObjectId(changedBy),
     });
 
     if (newStatus === OrderStatus.CONFIRMED) {
