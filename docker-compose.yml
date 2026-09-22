@@ -1,0 +1,41 @@
+name: ordenalink
+
+services:
+  api:
+    build:
+      context: .
+      target: dev
+    env_file: .env
+    environment:
+      # Respaldo para que el watch detecte cambios en Docker Desktop (Mac/Windows)
+      TSC_WATCHFILE: UseFsEventsWithFallbackDynamicPolling
+      TSC_WATCHDIRECTORY: UseFsEventsWithFallbackDynamicPolling
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    depends_on:
+      mongo:
+        condition: service_healthy
+        required: false
+
+  mongo:
+    image: mongo:8
+    profiles: [localdb]
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    # Inicia el replica set de 1 nodo (necesario para transacciones) si aún no existe
+    healthcheck:
+      test: >
+        mongosh --quiet --eval "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }).ok }"
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  mongo_data:

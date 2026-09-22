@@ -25,36 +25,53 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Project setup
+## Entorno con Docker
+
+Solo necesitas **Docker** (con Compose) y **make**. No hace falta instalar Node ni pnpm.
 
 ```bash
-$ pnpm install
+make setup   # crea .env a partir de .env.example (edita JWT_SECRET, GOOGLE_CLIENT_ID...)
+make build   # construye la imagen
+make up      # levanta API + MongoDB local en http://localhost:3000/api
+make logs    # ver logs de la API
+make help    # lista todos los comandos
 ```
 
-## Compile and run the project
+### Base de datos: local o Atlas
+
+- **Local (por defecto):** `make up` levanta MongoDB 8 como replica set de 1 nodo
+  (requerido por las transacciones del registro de negocios). Usa en `.env`:
+  `MONGODB_URI=mongodb://mongo:27017/ordenalink?replicaSet=rs0&directConnection=true`
+- **Atlas:** pon tu URI `mongodb+srv://...` en `.env` y usa `make up-atlas` (solo levanta la API).
+
+Los datos locales persisten entre `make down` / `make up`. `make reset` los borra y reconstruye todo.
+
+### Hot-reload
+
+La API corre con `nest start --watch` y el código está montado como volumen:
+al guardar un archivo en `src/` el servidor recompila y se reinicia solo.
+
+### Comandos útiles
+
+| Comando | Acción |
+|---|---|
+| `make up` / `make up-atlas` | Levantar en primer plano (con Mongo local / solo API); Ctrl+C detiene |
+| `make up-d` | Levantar en segundo plano |
+| `make down` / `make restart` | Detener / reiniciar |
+| `make reset` | Borrar contenedores y volúmenes, reconstruir desde cero |
+| `make logs` / `make logs-db` | Logs de la API / MongoDB |
+| `make bash` / `make mongo-shell` | Shell en la API / `mongosh` |
+| `make install` / `make add pkg=x [dev=1]` | Instalar / añadir dependencias dentro del contenedor |
+| `make test` / `make test-e2e` / `make lint` / `make format` | Scripts de calidad |
+| `make prod-build` / `make prod-up` / `make prod-down` | Imagen de producción (`node dist/main`) |
+
+## Sin Docker
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm install
+pnpm run start:dev   # watch mode
+pnpm run build && pnpm run start:prod
+pnpm run test
 ```
 
 ## Deployment
