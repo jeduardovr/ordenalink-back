@@ -3,10 +3,11 @@
 
 COMPOSE      := docker compose
 COMPOSE_DB   := $(COMPOSE) --profile localdb
+COMPOSE_ATLAS := $(COMPOSE) -f docker-compose.yml -f docker-compose.atlas.yml
 COMPOSE_PROD := docker compose -f docker-compose.prod.yml
 API          := api
 
-.PHONY: help setup build up up-d up-atlas down restart reset logs logs-db bash mongo-shell ps \
+.PHONY: help setup build up up-d up-atlas up-atlas-d down restart reset logs logs-db bash mongo-shell ps \
         install add test test-e2e lint format prod-build prod-up prod-down prod-logs
 
 help: ## Muestra esta ayuda
@@ -18,14 +19,17 @@ setup: ## Crea .env a partir de .env.example (si no existe)
 build: ## Construye las imágenes de desarrollo
 	$(COMPOSE_DB) build
 
-up: ## Levanta API + MongoDB local en primer plano (Ctrl+C para detener)
+up: ## Levanta API + MongoDB local + DbGate (localhost:8081) en primer plano (Ctrl+C para detener)
 	$(COMPOSE_DB) up
 
 up-d: ## Igual que up, pero en segundo plano
 	$(COMPOSE_DB) up -d
 
-up-atlas: ## Levanta solo la API en primer plano (usa MONGODB_URI de Atlas en .env)
-	$(COMPOSE) up $(API)
+up-atlas: ## Levanta API + DbGate contra Atlas (MONGODB_URI_ATLAS) en primer plano
+	$(COMPOSE_ATLAS) up $(API) dbgate
+
+up-atlas-d: ## Igual que up-atlas, pero en segundo plano
+	$(COMPOSE_ATLAS) up -d $(API) dbgate
 
 down: ## Detiene y elimina los contenedores
 	$(COMPOSE_DB) down

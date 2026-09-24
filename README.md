@@ -39,12 +39,24 @@ make help    # lista todos los comandos
 
 ### Base de datos: local o Atlas
 
-- **Local (por defecto):** `make up` levanta MongoDB 8 como replica set de 1 nodo
-  (requerido por las transacciones del registro de negocios). Usa en `.env`:
-  `MONGODB_URI=mongodb://mongo:27017/ordenalink?replicaSet=rs0&directConnection=true`
-- **Atlas:** pon tu URI `mongodb+srv://...` en `.env` y usa `make up-atlas` (solo levanta la API).
+En `.env` se definen las dos conexiones y el comando decide cuál usan la API y DbGate:
+
+| Comando | Base de datos | Variable en `.env` |
+|---|---|---|
+| `make up` / `make up-d` | MongoDB 8 local en Docker (replica set de 1 nodo, requerido por las transacciones) | `MONGODB_URI_LOCAL` (opcional, tiene valor por defecto) |
+| `make up-atlas` / `make up-atlas-d` | MongoDB Atlas (no se levanta el Mongo local) | `MONGODB_URI_ATLAS` (obligatoria) |
+
+La lógica vive en `docker-compose.atlas.yml`, que se aplica encima de `docker-compose.yml` solo en modo Atlas.
+Para Atlas, recuerda permitir tu IP en *Network Access*.
 
 Los datos locales persisten entre `make down` / `make up`. `make reset` los borra y reconstruye todo.
+
+### Interfaz web de MongoDB (DbGate)
+
+Con cualquiera de los dos modos se levanta [DbGate](https://dbgate.org) en **http://localhost:8081**,
+conectado a la misma base que la API ("Mongo local" o "Mongo Atlas"). Sirve para explorar y editar
+documentos, ejecutar consultas y agregaciones, e importar/exportar datos. No existe en producción.
+En modo Atlas estás tocando datos reales: considera un usuario de Atlas de solo lectura.
 
 ### Hot-reload
 
@@ -55,8 +67,8 @@ al guardar un archivo en `src/` el servidor recompila y se reinicia solo.
 
 | Comando | Acción |
 |---|---|
-| `make up` / `make up-atlas` | Levantar en primer plano (con Mongo local / solo API); Ctrl+C detiene |
-| `make up-d` | Levantar en segundo plano |
+| `make up` / `make up-atlas` | Levantar en primer plano (Mongo local / Atlas) con DbGate; Ctrl+C detiene |
+| `make up-d` / `make up-atlas-d` | Levantar en segundo plano |
 | `make down` / `make restart` | Detener / reiniciar |
 | `make reset` | Borrar contenedores y volúmenes, reconstruir desde cero |
 | `make logs` / `make logs-db` | Logs de la API / MongoDB |
