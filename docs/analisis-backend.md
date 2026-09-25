@@ -155,11 +155,11 @@ curl -s -X POST $API/auth/staff/login -H 'Content-Type: application/json' \
 TOKEN=<accessToken>
 BIZ=<businessId>
 
-# 3) Crear categoría y producto
+# 3) Crear categoría y producto (el DTO exige businessId en el body, aunque el servicio usa el del token)
 curl -s -X POST $API/categories -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{ "name": "Cafés", "slug": "cafes" }'
+  -d '{ "businessId": "'$BIZ'", "name": "Cafés", "slug": "cafes" }'
 curl -s -X POST $API/products -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{ "categoryId": "<categoryId>", "name": "Americano", "slug": "americano", "priceInCents": 4500 }'
+  -d '{ "businessId": "'$BIZ'", "categoryId": "<categoryId>", "name": "Americano", "slug": "americano", "priceInCents": 4500 }'
 
 # 4) Ver el menú público (lo que vería el comensal)
 curl -s $API/businesses/cafe-luna
