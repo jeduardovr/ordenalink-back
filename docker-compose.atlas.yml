@@ -1,15 +1,15 @@
 # Modo Atlas (make up-atlas): se aplica encima de docker-compose.yml.
-# La API y DbGate usan MONGODB_URI_ATLAS y no se levanta el Mongo local.
+# La API y DbGate usan el MONGODB_URI del .env y no se levanta el Mongo local.
 services:
   api:
     environment:
-      MONGODB_URI: ${MONGODB_URI_ATLAS:?Define MONGODB_URI_ATLAS en .env}
+      MONGODB_URI: ${MONGODB_URI:?Define MONGODB_URI en .env}
     depends_on: !reset {}
 
   dbgate:
     environment:
       CONNECTIONS: atlas
       LABEL_atlas: Mongo Atlas
-      URL_atlas: ${MONGODB_URI_ATLAS:?Define MONGODB_URI_ATLAS en .env}
+      URL_atlas: ${MONGODB_URI:?Define MONGODB_URI en .env}
       ENGINE_atlas: mongo@dbgate-plugin-mongo
     depends_on: !reset {}

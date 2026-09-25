@@ -7,8 +7,8 @@ services:
       target: prod
     env_file: .env
     environment:
-      # Producción siempre usa Atlas
-      MONGODB_URI: ${MONGODB_URI_ATLAS:?Define MONGODB_URI_ATLAS en .env}
+      # Falla al arrancar con un mensaje claro si falta en .env
+      MONGODB_URI: ${MONGODB_URI:?Define MONGODB_URI en .env}
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
     restart: unless-stopped

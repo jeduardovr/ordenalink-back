@@ -40,13 +40,15 @@ make help    # lista todos los comandos
 
 ### Base de datos: local o Atlas
 
-En `.env` se definen las dos conexiones y el comando decide cuál usan la API y DbGate:
+Hay **una sola variable**, `MONGODB_URI`, con la URI de Atlas. Es la misma que lee la app (`src/app.module.ts`).
+El comando decide si se usa:
 
-| Comando | Base de datos | Variable en `.env` |
+| Comando | Base de datos | ¿Usa `MONGODB_URI` del `.env`? |
 |---|---|---|
-| `make up` / `make up-d` | MongoDB 8 local en Docker (replica set de 1 nodo, requerido por las transacciones) | `MONGODB_URI_LOCAL` (opcional, tiene valor por defecto) |
-| `make up-atlas` / `make up-atlas-d` | MongoDB Atlas (no se levanta el Mongo local) | `MONGODB_URI_ATLAS` (obligatoria) |
-| `make prod-up` | MongoDB Atlas (producción) | `MONGODB_URI_ATLAS` (obligatoria) |
+| `make up` / `make up-d` | MongoDB 8 local en Docker (replica set de 1 nodo, requerido por las transacciones) | No: usa la URI fija del Mongo local definida en `docker-compose.yml` |
+| `make up-atlas` / `make up-atlas-d` | MongoDB Atlas (no se levanta el Mongo local) | Sí (obligatoria) |
+| `make prod-up` | MongoDB Atlas | Sí (obligatoria) |
+| Sin Docker (`pnpm start:dev`) | La que tenga `MONGODB_URI` | Sí |
 
 La lógica vive en `docker-compose.atlas.yml`, que se aplica encima de `docker-compose.yml` solo en modo Atlas.
 
@@ -58,7 +60,7 @@ La lógica vive en `docker-compose.atlas.yml`, que se aplica encima de `docker-c
 3. En Atlas, **Connect → Drivers**: copia la URI `mongodb+srv://...` y agrega el nombre de la base (`/ordenalink`).
 4. En tu `.env`:
    ```env
-   MONGODB_URI_ATLAS=mongodb+srv://USUARIO:PASSWORD@cluster0.xxxxx.mongodb.net/ordenalink?retryWrites=true&w=majority
+   MONGODB_URI=mongodb+srv://USUARIO:PASSWORD@cluster0.xxxxx.mongodb.net/ordenalink?retryWrites=true&w=majority
    ```
 5. Levanta (si estaba corriendo en modo local, primero `make down`):
    ```bash
@@ -67,8 +69,10 @@ La lógica vive en `docker-compose.atlas.yml`, que se aplica encima de `docker-c
    ```
 6. Comprueba: la API en http://localhost:3000/api y DbGate en http://localhost:8081 con la conexión "Mongo Atlas".
 
-Para volver a local: `make down && make up`. Si falta `MONGODB_URI_ATLAS`, Compose se detiene con
-`required variable MONGODB_URI_ATLAS is missing a value`.
+Para volver a local: `make down && make up`. Si falta `MONGODB_URI`, Compose se detiene con
+`required variable MONGODB_URI is missing a value`.
+
+Para saber a qué base está conectada la API: `docker compose exec api printenv MONGODB_URI`.
 
 Los datos locales persisten entre `make down` / `make up`. `make reset` los borra y reconstruye todo.
 
@@ -91,7 +95,7 @@ Compose usa solo los archivos que le pasa el `Makefile` con `-f`:
 | Archivo | Para qué | Comando |
 |---|---|---|
 | `docker-compose.yml` | Desarrollo: API con hot-reload, Mongo local y DbGate (perfil `localdb`) | `make up` |
-| `docker-compose.atlas.yml` | Complemento que se aplica **encima** del anterior: cambia la URI a Atlas y quita la dependencia de Mongo local | `make up-atlas` |
+| `docker-compose.atlas.yml` | Complemento que se aplica **encima** del anterior: devuelve la URI al `MONGODB_URI` del `.env` y quita la dependencia de Mongo local | `make up-atlas` |
 | `docker-compose.prod.yml` | Producción, independiente: imagen compilada, sin volúmenes, `restart: unless-stopped` | `make prod-up` |
 
 Para ver la configuración final de un modo antes de levantarlo: `docker compose -f docker-compose.yml -f docker-compose.atlas.yml config`
@@ -135,9 +139,9 @@ En `docs/analisis-backend.md` hay un flujo completo de prueba con `curl`.
 
 ## Sin Docker
 
-La app lee `MONGODB_URI` directamente (en Docker la inyecta Compose). Agrégala a tu `.env`, por ejemplo con un
-Mongo en tu máquina o la URI de Atlas: `MONGODB_URI=mongodb://localhost:27017/ordenalink?directConnection=true`.
-El registro de negocios usa transacciones, así que el Mongo debe ser un replica set (Atlas ya lo es).
+La app usa el `MONGODB_URI` del `.env` tal cual, es decir **Atlas**. Para otro Mongo, cámbialo
+(p. ej. `mongodb://localhost:27017/ordenalink?directConnection=true`); el registro de negocios usa transacciones,
+así que debe ser un replica set (Atlas ya lo es).
 
 ```bash
 pnpm install

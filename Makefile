@@ -25,7 +25,7 @@ up: ## Levanta API + MongoDB local + DbGate (localhost:8081) en primer plano (Ct
 up-d: ## Igual que up, pero en segundo plano
 	$(COMPOSE_DB) up -d
 
-up-atlas: ## Levanta API + DbGate contra Atlas (MONGODB_URI_ATLAS) en primer plano
+up-atlas: ## Levanta API + DbGate contra Atlas (MONGODB_URI del .env) en primer plano
 	$(COMPOSE_ATLAS) up $(API) dbgate
 
 up-atlas-d: ## Igual que up-atlas, pero en segundo plano
