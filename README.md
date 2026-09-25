@@ -32,7 +32,8 @@ Solo necesitas **Docker** (con Compose) y **make**. No hace falta instalar Node 
 ```bash
 make setup   # crea .env a partir de .env.example (edita JWT_SECRET, GOOGLE_CLIENT_ID...)
 make build   # construye la imagen
-make up      # levanta API + MongoDB local en http://localhost:3000/api
+make up      # levanta API + MongoDB local + DbGate (API en http://localhost:3000/api)
+make up-atlas  # o bien: API + DbGate contra MongoDB Atlas
 make logs    # ver logs de la API
 make help    # lista todos los comandos
 ```
@@ -47,7 +48,26 @@ En `.env` se definen las dos conexiones y el comando decide cuál usan la API y 
 | `make up-atlas` / `make up-atlas-d` | MongoDB Atlas (no se levanta el Mongo local) | `MONGODB_URI_ATLAS` (obligatoria) |
 
 La lógica vive en `docker-compose.atlas.yml`, que se aplica encima de `docker-compose.yml` solo en modo Atlas.
-Para Atlas, recuerda permitir tu IP en *Network Access*.
+
+#### Levantar con Atlas paso a paso
+
+1. En Atlas, **Database Access**: crea un usuario de base de datos (no es tu cuenta de Atlas).
+   Si su contraseña tiene caracteres especiales, codifícalos en la URI (`@` → `%40`, `:` → `%3A`, `/` → `%2F`).
+2. En Atlas, **Network Access**: agrega tu IP actual (*Add current IP address*); si no, la conexión da timeout.
+3. En Atlas, **Connect → Drivers**: copia la URI `mongodb+srv://...` y agrega el nombre de la base (`/ordenalink`).
+4. En tu `.env`:
+   ```env
+   MONGODB_URI_ATLAS=mongodb+srv://USUARIO:PASSWORD@cluster0.xxxxx.mongodb.net/ordenalink?retryWrites=true&w=majority
+   ```
+5. Levanta (si estaba corriendo en modo local, primero `make down`):
+   ```bash
+   make up-atlas     # primer plano
+   make up-atlas-d   # o en segundo plano
+   ```
+6. Comprueba: la API en http://localhost:3000/api y DbGate en http://localhost:8081 con la conexión "Mongo Atlas".
+
+Para volver a local: `make down && make up`. Si falta `MONGODB_URI_ATLAS`, Compose se detiene con
+`required variable MONGODB_URI_ATLAS is missing a value`.
 
 Los datos locales persisten entre `make down` / `make up`. `make reset` los borra y reconstruye todo.
 
