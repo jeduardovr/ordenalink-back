@@ -46,6 +46,7 @@ En `.env` se definen las dos conexiones y el comando decide cuál usan la API y 
 |---|---|---|
 | `make up` / `make up-d` | MongoDB 8 local en Docker (replica set de 1 nodo, requerido por las transacciones) | `MONGODB_URI_LOCAL` (opcional, tiene valor por defecto) |
 | `make up-atlas` / `make up-atlas-d` | MongoDB Atlas (no se levanta el Mongo local) | `MONGODB_URI_ATLAS` (obligatoria) |
+| `make prod-up` | MongoDB Atlas (producción) | `MONGODB_URI_ATLAS` (obligatoria) |
 
 La lógica vive en `docker-compose.atlas.yml`, que se aplica encima de `docker-compose.yml` solo en modo Atlas.
 
@@ -83,6 +84,41 @@ En modo Atlas estás tocando datos reales: considera un usuario de Atlas de solo
 La API corre con `nest start --watch` y el código está montado como volumen:
 al guardar un archivo en `src/` el servidor recompila y se reinicia solo.
 
+### Archivos de Docker: cuál se usa en cada comando
+
+Compose usa solo los archivos que le pasa el `Makefile` con `-f`:
+
+| Archivo | Para qué | Comando |
+|---|---|---|
+| `docker-compose.yml` | Desarrollo: API con hot-reload, Mongo local y DbGate (perfil `localdb`) | `make up` |
+| `docker-compose.atlas.yml` | Complemento que se aplica **encima** del anterior: cambia la URI a Atlas y quita la dependencia de Mongo local | `make up-atlas` |
+| `docker-compose.prod.yml` | Producción, independiente: imagen compilada, sin volúmenes, `restart: unless-stopped` | `make prod-up` |
+
+Para ver la configuración final de un modo antes de levantarlo: `docker compose -f docker-compose.yml -f docker-compose.atlas.yml config`
+(ojo: muestra las URIs con contraseña).
+
+El `Dockerfile` es multi-stage y cada compose elige la etapa con `build.target`:
+
+- `target: dev` (desarrollo) → `base → deps → dev`: instala todas las dependencias y corre `pnpm start:dev`;
+  el código entra por volumen.
+- `target: prod` (producción) → `base → deps → build` (compila a `dist/`) + `base → prod-deps` (solo dependencias
+  de producción) → `prod`: imagen limpia con `node_modules` de producción y `dist/`, corre `node dist/main`.
+
+### Probar la API
+
+Rutas públicas que puedes abrir en el navegador (con datos que existan en la base):
+
+```
+http://localhost:3000/api/businesses/<slug>
+http://localhost:3000/api/categories/business/<businessId>
+http://localhost:3000/api/products/business/<businessId>
+http://localhost:3000/api/products/<productId>
+```
+
+Las rutas de administración (`/api/orders/business`, crear productos, cambiar estados…) requieren
+`Authorization: Bearer <token>`: usa Postman/Bruno/curl y obtén el token con `POST /api/auth/staff/login`.
+En `docs/analisis-backend.md` hay un flujo completo de prueba con `curl`.
+
 ### Comandos útiles
 
 | Comando | Acción |
@@ -98,6 +134,10 @@ al guardar un archivo en `src/` el servidor recompila y se reinicia solo.
 | `make prod-build` / `make prod-up` / `make prod-down` | Imagen de producción (`node dist/main`) |
 
 ## Sin Docker
+
+La app lee `MONGODB_URI` directamente (en Docker la inyecta Compose). Agrégala a tu `.env`, por ejemplo con un
+Mongo en tu máquina o la URI de Atlas: `MONGODB_URI=mongodb://localhost:27017/ordenalink?directConnection=true`.
+El registro de negocios usa transacciones, así que el Mongo debe ser un replica set (Atlas ya lo es).
 
 ```bash
 pnpm install
