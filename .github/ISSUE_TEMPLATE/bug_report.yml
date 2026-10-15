@@ -1,0 +1,125 @@
+name: Bug
+description: Algo no funciona como dice la spec, un ADR, un test o lo que el usuario espera.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Escríbelo para que otra persona pueda reproducirlo y medir su impacto sin preguntarte nada.
+        Reporta solo lo comprobado; si algo es sospecha, dilo. Regla completa: sección "Bugs" del `CLAUDE.md` del repo padre `ordenalink`.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Qué pasa
+      description: Una o dos frases. Qué falla y en qué situación.
+      placeholder: Al cambiar un solo campo de loyaltySettings con PATCH /businesses/me, el programa de fidelidad se apaga.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severidad
+      description: "Escala de la sección \"Bugs\" del CLAUDE.md del repo padre."
+      options:
+        - "S1 · Crítica: no se reciben órdenes, se pierden o corrompen datos, seguridad o fuga entre negocios, nadie puede entrar"
+        - "S2 · Alta: una función principal falla o cambia datos sin avisar, sin alternativa razonable"
+        - "S3 · Media: falla con alternativa, o solo en un caso poco común"
+        - "S4 · Baja: cosmético, textos, detalles de UX"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: affected
+    attributes:
+      label: A quién afecta
+      options:
+        - label: Comensal
+        - label: Staff (mesero, cajero, cocina)
+        - label: Dueño o encargado
+        - label: Plataforma (superadmin, soporte)
+        - label: Equipo de desarrollo (build, tests, entorno local)
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impacto
+      description: Qué se rompe para el negocio, a cuántos alcanza (todos, un plan, una configuración), si pierde o cambia datos, y si hay alternativa mientras se arregla.
+      placeholder: |
+        - Alcance: todo negocio que edite su configuración desde el panel.
+        - Datos: sí, se sobrescriben ajustes guardados sin avisar.
+        - Alternativa: mandar el subdocumento completo en cada PATCH.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Cómo reproducirlo
+      description: Pasos numerados con datos concretos (peticiones, cuerpos, usuario y rol). Que cualquiera los pueda repetir en local.
+      placeholder: |
+        1. Registrar un negocio con loyaltySettings.enabled = true.
+        2. PATCH /api/businesses/me con { "loyaltySettings": { "minimumOrderAmountInCents": 1000 } }.
+        3. GET /api/businesses/<slug>.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado actual
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidencia
+      description: Respuestas, logs o capturas. Sin tokens, contraseñas ni datos personales.
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Entorno
+      description: Rama o commit, y dónde se vio (local con Mongo del compose, Atlas, producción).
+      placeholder: main @ 380598d · local (make up-d)
+    validations:
+      required: true
+
+  - type: textarea
+    id: cause
+    attributes:
+      label: Causa
+      description: Si se conoce. Archivo y función, y por qué falla. Si es una hipótesis, dilo.
+      placeholder: "src/modules/businesses/businesses.service.ts · updateOwnedBusiness: hace $set del subdocumento completo."
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Propuesta de solución
+      description: Qué cambiar y qué riesgos tiene. Si la solución contradice un ADR, primero va un ADR nuevo.
+
+  - type: textarea
+    id: test
+    attributes:
+      label: Cómo se va a verificar
+      description: El test que reproduce el bug (debe fallar antes del arreglo y pasar después). Si ya existe como it.todo, indica dónde.
+      placeholder: "test/businesses.e2e-spec.ts: it.todo('keeps the other orderSettings fields …')"
+    validations:
+      required: true
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Relacionado
+      description: ADRs, specs, docs del repo padre, otros issues o PRs (owner/repo#N).
