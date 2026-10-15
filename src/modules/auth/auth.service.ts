@@ -67,7 +67,8 @@ export class AuthService {
         emailVerified: payload.email_verified,
         name:
           payload.name?.trim() ||
-          payload.email.split('@')[0],
+          payload.email.split('@')[0] ||
+          payload.email,
         avatarUrl: payload.picture,
       });
 
