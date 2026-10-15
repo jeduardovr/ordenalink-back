@@ -121,7 +121,7 @@ http://localhost:3000/api/products/<productId>
 
 Las rutas de administración (`/api/orders/business`, crear productos, cambiar estados…) requieren
 `Authorization: Bearer <token>`: usa Postman/Bruno/curl y obtén el token con `POST /api/auth/staff/login`.
-En `docs/analisis-backend.md` hay un flujo completo de prueba con `curl`.
+En el repo padre, `../docs/research/2026-09-22-analisis-backend.md` tiene un flujo completo de prueba con `curl`.
 
 ### Comandos útiles
 
