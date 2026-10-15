@@ -6,6 +6,9 @@ COMPOSE_DB   := $(COMPOSE) --profile localdb
 COMPOSE_ATLAS := $(COMPOSE) -f docker-compose.yml -f docker-compose.atlas.yml
 COMPOSE_PROD := docker compose -f docker-compose.prod.yml
 API          := api
+# Store the image installed node_modules from (Dockerfile cache mount); pnpm
+# refuses to add packages when the store differs.
+PNPM_STORE   := /pnpm/store
 
 .PHONY: help setup build up up-d up-atlas up-atlas-d down restart reset logs logs-db bash mongo-shell ps \
         install add test test-e2e lint typecheck check format prod-build prod-up prod-down prod-logs
@@ -57,11 +60,11 @@ ps: ## Estado de los contenedores
 	$(COMPOSE_DB) ps
 
 install: ## pnpm install dentro del contenedor
-	$(COMPOSE) exec $(API) pnpm install
+	$(COMPOSE) exec $(API) pnpm install --store-dir $(PNPM_STORE)
 
 add: ## Añade una dependencia: make add pkg=nombre [dev=1]
 	@test -n "$(pkg)" || (echo "Uso: make add pkg=nombre [dev=1]" && exit 1)
-	$(COMPOSE) exec $(API) pnpm add $(if $(dev),-D) $(pkg)
+	$(COMPOSE) exec $(API) pnpm add --store-dir $(PNPM_STORE) $(if $(dev),-D) $(pkg)
 
 test: ## Tests unitarios
 	$(COMPOSE) exec $(API) pnpm test
@@ -75,7 +78,7 @@ lint: ## Linter (oxlint)
 typecheck: ## Verificación de tipos (tsc --noEmit)
 	$(COMPOSE) exec $(API) pnpm typecheck
 
-check: lint typecheck test ## Lint + tipos + tests unitarios (antes de dar un cambio por terminado)
+check: lint typecheck test test-e2e ## Lint + tipos + tests unitarios y e2e (antes de dar un cambio por terminado)
 
 format: ## Formatea el código (prettier)
 	$(COMPOSE) exec $(API) pnpm format

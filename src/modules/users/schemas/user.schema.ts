@@ -48,6 +48,7 @@ export class User {
 
   @Prop({
     required: true,
+    type: String,
     enum: UserRole,
     default: UserRole.CUSTOMER,
   })
