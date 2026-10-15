@@ -1,0 +1,129 @@
+name: Deuda técnica
+description: Código que funciona pero incumple una regla del CLAUDE.md o un ADR, y cuesta más mantenerlo así que arreglarlo.
+title: "[Deuda]: "
+labels: ["tech-debt"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Un issue por tema, con datos medidos (archivos y conteos), para que cualquiera pueda pagarla y cerrarla sin discutir.
+        Si es un comportamiento incorrecto que el usuario puede notar, no es deuda: usa la plantilla de Bug.
+        Regla completa: sección "Deuda técnica" del `CLAUDE.md` del repo padre `ordenalink`.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Qué deuda es
+      description: Una frase.
+      placeholder: Los controllers devuelven documentos de Mongoose en lugar de DTOs de respuesta.
+    validations:
+      required: true
+
+  - type: textarea
+    id: rule
+    attributes:
+      label: Regla que incumple
+      description: Sección del CLAUDE.md (de este repo o del padre) o ADR que no se cumple.
+      placeholder: "CLAUDE.md → Validation at the edges: \"Separate input and response DTOs. Never return a Mongoose document…\""
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Estado actual
+      description: Dónde está y cuánto hay, medido. Archivos, funciones y conteos; incluye cómo se midió para poder repetirlo.
+      placeholder: |
+        - 0 DTOs de respuesta en src/ (find src -path "*dto*" -name "*response*").
+        - Los handlers de products, categories, orders y businesses devuelven el documento tal cual.
+    validations:
+      required: true
+
+  - type: textarea
+    id: target
+    attributes:
+      label: Estado objetivo
+      description: Cómo debe quedar.
+    validations:
+      required: true
+
+  - type: textarea
+    id: interest
+    attributes:
+      label: Por qué importa (el interés)
+      description: Qué cuesta seguir así. Bugs que ya provocó o puede provocar, riesgo de seguridad, tiempo extra en cada cambio, dificultad para entender el código.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: risk
+    attributes:
+      label: Tipo de riesgo
+      options:
+        - label: Seguridad
+        - label: Integridad de datos
+        - label: Bugs
+        - label: Mantenibilidad
+        - label: Rendimiento
+        - label: Experiencia del desarrollador (build, tests, onboarding)
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridad
+      description: MoSCoW, como en los docs del repo padre.
+      options:
+        - "Must: bloquea features nuevas o tiene riesgo de seguridad o de datos"
+        - "Should: frena el desarrollo o causa bugs con frecuencia"
+        - "Could: mejora la calidad, sin urgencia"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Esfuerzo
+      options:
+        - "S: 2 días o menos"
+        - "M: 3 a 7 días"
+        - "L: más de 1 semana (conviene partirla en varios issues)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+      description: Cómo pagarla. Si conviene en varios PRs, en qué orden. Si contradice un ADR, primero va un ADR nuevo.
+    validations:
+      required: true
+
+  - type: textarea
+    id: change-risk
+    attributes:
+      label: Riesgo del cambio
+      description: Qué se puede romper al pagarla y cómo se protege (tests que ya existen o que hay que escribir antes).
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Criterio de terminado
+      description: Condición verificable con un comando o un test, no una opinión.
+      placeholder: "0 handlers que devuelven documentos de Mongoose; make check pasa."
+    validations:
+      required: true
+
+  - type: textarea
+    id: prevention
+    attributes:
+      label: Cómo evitar que vuelva
+      description: La regla de lint, el test o el check de CI que lo impide. Si no se puede automatizar, dilo y explica cómo se revisa.
+      placeholder: "Activar la regla X en .oxlintrc.json como error."
+    validations:
+      required: true
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Relacionado
+      description: Issues (owner/repo#N), ADRs, docs del repo padre.
