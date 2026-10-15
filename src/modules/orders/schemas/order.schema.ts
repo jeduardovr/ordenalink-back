@@ -111,6 +111,7 @@ export const OrderItemSchema =
 export class OrderStatusHistory {
   @Prop({
     required: true,
+    type: String,
     enum: OrderStatus,
   })
   status!: OrderStatus;
@@ -168,6 +169,7 @@ export class Order {
 
   @Prop({
     required: true,
+    type: String,
     enum: FulfillmentType,
   })
   fulfillmentType!: FulfillmentType;
@@ -214,6 +216,7 @@ export class Order {
 
   @Prop({
     required: true,
+    type: String,
     enum: OrderStatus,
     default: OrderStatus.PENDING,
     index: true,

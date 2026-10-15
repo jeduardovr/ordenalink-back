@@ -21,7 +21,7 @@ Never install anything on the host. The stack must be up (`make up-d`).
 | Command | What it does |
 | --- | --- |
 | `make up-d` / `make down` | Start / stop API + local Mongo (replica set) + DbGate |
-| `make check` | **Lint + typecheck + unit tests. Run before saying a change is done; never claim done if it fails.** |
+| `make check` | **Lint + typecheck + unit + e2e tests. Run before saying a change is done; never claim done if it fails.** |
 | `make lint` · `make typecheck` · `make test` · `make test-e2e` | Each check on its own |
 | `make format` | Prettier |
 | `make add pkg=name [dev=1]` | Add a dependency (**ask first**, see AI rules) |
@@ -91,7 +91,7 @@ Avoid: manual singletons, service locators, god services (> ~300 lines or many u
 - Derive instead of duplicating: `PartialType`, `PickType`, `OmitType` from `@nestjs/mapped-types` for DTOs; `Pick`/`Omit` for plain types.
 - `import type` for type-only imports, **except** classes used in constructor injection or as DTO/param types of decorated methods: those need a value import so `emitDecoratorMetadata` works. Breaking this fails at runtime with an undefined provider.
 - `const` and `readonly` by default; don't mutate inputs.
-- Always `await` promises or return them; no floating promises.
+- Always `await` promises or return them; no floating promises (oxlint type-aware error). Fire-and-forget only with `void` and a comment.
 
 ## Validation at the edges
 
@@ -118,8 +118,10 @@ Avoid: manual singletons, service locators, god services (> ~300 lines or many u
 
 Every change ships with tests. Test pyramid: many unit, some integration/e2e, few full flows.
 
-- **Unit** (`*.spec.ts` next to the code): all `domain/` logic, and services with mocked dependencies (`getModelToken(Model.name)` + `Test.createTestingModule`).
-- **E2E** (`test/*.e2e-spec.ts`, supertest): critical flows against the real Mongo replica set of the compose stack, using a **separate database per test file** that is dropped afterwards. Never touch the dev database.
+- Runner: **Vitest** with SWC (`vitest.config.mts`, `vitest.config.e2e.mts`); `describe`/`it`/`expect`/`vi` are globals. SWC is required because Nest's DI needs decorator metadata.
+- **Unit** (`src/**/*.spec.ts`, next to the code): all `domain/` logic, and services with mocked dependencies (`getModelToken(Model.name)` + `Test.createTestingModule`, `vi.fn()`).
+- **E2E** (`test/**/*.e2e-spec.ts`, supertest): boot the app with `createTestApp()` / `closeTestApp()` from `test/support/test-app.ts`. Each file gets a throwaway database on the local compose Mongo, dropped at the end; the helper refuses to run against Atlas. Never touch the dev database.
+- Mongoose props typed with an enum need an explicit `type: String` next to `enum`: SWC emits the enum object as design type and Mongoose would read it as a nested schema.
 - **Tenant isolation**: every route with `:id` gets a test that uses tenant A's token on tenant B's id and expects 404.
 - Arrange / Act / Assert. Names describe behavior: `it('returns 404 when the order belongs to another business')`.
 - Tests are independent: no shared mutable state, no order dependence, build data with factories.
@@ -144,7 +146,7 @@ Every change ships with tests. Test pyramid: many unit, some integration/e2e, fe
 
 ## Known issues
 
-- **Unit tests don't run**: NestJS 12 ships ESM-only and Jest loads it as CommonJS (`Must use import to load ES Module: @nestjs/testing`). Fix pending: Jest in ESM mode or migrate to Vitest. Until then `make test` fails for every suite.
-- `no-floating-promises` is configured in `oxlint.json` but is not enforced: it needs oxlint's type-aware mode (`oxlint-tsgolint`), not installed yet.
-- The only e2e test is broken (`AppController` isn't registered in `AppModule`).
+- 5 `no-misused-spread` lint warnings: services spread DTOs into `create`/update data (`categories.service.ts`, `products.service.ts`). That's the mass-assignment risk in `../docs/architecture/seguridad.md`; fix by listing the allowed fields when touching those services. Warnings don't fail `make lint`; errors do.
+- The codebase isn't Prettier-formatted yet. Format only the files you change (`pnpm exec prettier --write <files>` via `make bash`); a repo-wide `make format` belongs in its own commit.
+- `AppController`/`AppService` are scaffold leftovers, not registered in `AppModule`.
 - `proyecto.zip` is tracked in git and contains a `.env`: review and rotate secrets (backlog #1).
