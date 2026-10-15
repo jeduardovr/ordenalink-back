@@ -8,7 +8,7 @@ COMPOSE_PROD := docker compose -f docker-compose.prod.yml
 API          := api
 
 .PHONY: help setup build up up-d up-atlas up-atlas-d down restart reset logs logs-db bash mongo-shell ps \
-        install add test test-e2e lint format prod-build prod-up prod-down prod-logs
+        install add test test-e2e lint typecheck check format prod-build prod-up prod-down prod-logs
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -71,6 +71,11 @@ test-e2e: ## Tests e2e
 
 lint: ## Linter (oxlint)
 	$(COMPOSE) exec $(API) pnpm lint
+
+typecheck: ## Verificación de tipos (tsc --noEmit)
+	$(COMPOSE) exec $(API) pnpm typecheck
+
+check: lint typecheck test ## Lint + tipos + tests unitarios (antes de dar un cambio por terminado)
 
 format: ## Formatea el código (prettier)
 	$(COMPOSE) exec $(API) pnpm format
