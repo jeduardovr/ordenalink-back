@@ -123,6 +123,8 @@ Every change ships with tests. Test pyramid: many unit, some integration/e2e, fe
 - **E2E** (`test/**/*.e2e-spec.ts`, supertest): boot the app with `createTestApp()` / `closeTestApp()` from `test/support/test-app.ts`. Each file gets a throwaway database on the local compose Mongo, dropped at the end; the helper refuses to run against Atlas. Never touch the dev database.
 - Mongoose props typed with an enum need an explicit `type: String` next to `enum`: SWC emits the enum object as design type and Mongoose would read it as a nested schema.
 - **Tenant isolation**: every route with `:id` gets a test that uses tenant A's token on tenant B's id and expects 404.
+- Build test data through the API with `test/support/fixtures.ts` (`registerBusiness`, `createCategory`, `createProduct`, `dineInOrder`, `http`). Use services or the raw connection only for what has no endpoint yet (e.g. creating an EMPLOYEE).
+- A known gap or bug gets an `it.todo('<expected behavior>')` with a comment pointing to the doc or issue, never a test that asserts the wrong behavior.
 - Arrange / Act / Assert. Names describe behavior: `it('returns 404 when the order belongs to another business')`.
 - Tests are independent: no shared mutable state, no order dependence, build data with factories.
 - **A bug fix starts with a test that reproduces the bug.**
