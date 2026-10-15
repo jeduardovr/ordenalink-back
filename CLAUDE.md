@@ -142,6 +142,7 @@ Every change ships with tests. Test pyramid: many unit, some integration/e2e, fe
 - Make minimal, focused changes. Don't refactor or "improve" code that wasn't part of the request; mention it instead.
 - Don't add dependencies without asking.
 - If something is ambiguous or contradicts an ADR or spec, ask before assuming.
+- If you find a bug, stop and follow the "Bugs" section of `../CLAUDE.md`: verify it, estimate its severity (S1-S4) and **ask** whether to fix it now or open an issue with `.github/ISSUE_TEMPLATE/bug_report.yml`. Never fix it silently.
 - Write or update tests with every change, then run `make check`. Report failures as they are; never call a change done while it fails.
 - Record important decisions as an ADR `propuesta` in `../docs/decisions/` (never mark it `aceptada`).
 - Don't commit or push unless asked.
