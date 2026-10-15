@@ -36,11 +36,19 @@ export async function createTestApp(): Promise<INestApplication> {
   const app = moduleRef.createNestApplication();
   configureApp(app);
   await app.init();
+  // Unique indexes (slugs, usernames) must exist before tests rely on them.
+  await Promise.all(
+    Object.values(getConnection(app).models).map((model) => model.init()),
+  );
   return app;
 }
 
+export function getConnection(app: INestApplication): Connection {
+  return app.get<Connection>(getConnectionToken());
+}
+
 export async function closeTestApp(app: INestApplication): Promise<void> {
-  const connection = app.get<Connection>(getConnectionToken());
+  const connection = getConnection(app);
   // Mongoose builds indexes in the background; dropping before they finish
   // lets them recreate the database right after.
   await Promise.all(
