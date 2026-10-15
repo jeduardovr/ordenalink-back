@@ -1,0 +1,65 @@
+name: ordenalink
+
+# URI del Mongo local de este compose (fija, no va en .env)
+x-mongo-local-uri: &mongo-local-uri mongodb://mongo:27017/ordenalink?replicaSet=rs0&directConnection=true
+
+services:
+  api:
+    build:
+      context: .
+      target: dev
+    env_file: .env
+    environment:
+      # make up: ignora el MONGODB_URI del .env y usa el Mongo local.
+      # make up-atlas: docker-compose.atlas.yml lo devuelve al valor del .env.
+      MONGODB_URI: *mongo-local-uri
+      # Respaldo para que el watch detecte cambios en Docker Desktop (Mac/Windows)
+      TSC_WATCHFILE: UseFsEventsWithFallbackDynamicPolling
+      TSC_WATCHDIRECTORY: UseFsEventsWithFallbackDynamicPolling
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    depends_on:
+      mongo:
+        condition: service_healthy
+        required: false
+
+  mongo:
+    image: mongo:8
+    profiles: [localdb]
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    # Inicia el replica set de 1 nodo (necesario para transacciones) si aún no existe
+    healthcheck:
+      test: >
+        mongosh --quiet --eval "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }).ok }"
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  # Interfaz web para MongoDB (tipo phpMyAdmin) en http://localhost:8081
+  dbgate:
+    image: dbgate/dbgate:latest
+    profiles: [localdb]
+    ports:
+      - "8081:3000"
+    environment:
+      CONNECTIONS: mongo
+      LABEL_mongo: Mongo local
+      URL_mongo: *mongo-local-uri
+      ENGINE_mongo: mongo@dbgate-plugin-mongo
+    volumes:
+      - dbgate_data:/root/.dbgate
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
+  dbgate_data:

@@ -1,0 +1,14 @@
+name: ordenalink-prod
+
+services:
+  api:
+    build:
+      context: .
+      target: prod
+    env_file: .env
+    environment:
+      # Falla al arrancar con un mensaje claro si falta en .env
+      MONGODB_URI: ${MONGODB_URI:?Define MONGODB_URI en .env}
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    restart: unless-stopped

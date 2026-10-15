@@ -25,36 +25,129 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Project setup
+## Entorno con Docker
+
+Solo necesitas **Docker** (con Compose) y **make**. No hace falta instalar Node ni pnpm.
 
 ```bash
-$ pnpm install
+make setup   # crea .env a partir de .env.example (edita JWT_SECRET, GOOGLE_CLIENT_ID...)
+make build   # construye la imagen
+make up      # levanta API + MongoDB local + DbGate (API en http://localhost:3000/api)
+make up-atlas  # o bien: API + DbGate contra MongoDB Atlas
+make logs    # ver logs de la API
+make help    # lista todos los comandos
 ```
 
-## Compile and run the project
+### Base de datos: local o Atlas
 
-```bash
-# development
-$ pnpm run start
+Hay **una sola variable**, `MONGODB_URI`, con la URI de Atlas. Es la misma que lee la app (`src/app.module.ts`).
+El comando decide si se usa:
 
-# watch mode
-$ pnpm run start:dev
+| Comando | Base de datos | ¿Usa `MONGODB_URI` del `.env`? |
+|---|---|---|
+| `make up` / `make up-d` | MongoDB 8 local en Docker (replica set de 1 nodo, requerido por las transacciones) | No: usa la URI fija del Mongo local definida en `docker-compose.yml` |
+| `make up-atlas` / `make up-atlas-d` | MongoDB Atlas (no se levanta el Mongo local) | Sí (obligatoria) |
+| `make prod-up` | MongoDB Atlas | Sí (obligatoria) |
+| Sin Docker (`pnpm start:dev`) | La que tenga `MONGODB_URI` | Sí |
 
-# production mode
-$ pnpm run start:prod
+La lógica vive en `docker-compose.atlas.yml`, que se aplica encima de `docker-compose.yml` solo en modo Atlas.
+
+#### Levantar con Atlas paso a paso
+
+1. En Atlas, **Database Access**: crea un usuario de base de datos (no es tu cuenta de Atlas).
+   Si su contraseña tiene caracteres especiales, codifícalos en la URI (`@` → `%40`, `:` → `%3A`, `/` → `%2F`).
+2. En Atlas, **Network Access**: agrega tu IP actual (*Add current IP address*); si no, la conexión da timeout.
+3. En Atlas, **Connect → Drivers**: copia la URI `mongodb+srv://...` y agrega el nombre de la base (`/ordenalink`).
+4. En tu `.env`:
+   ```env
+   MONGODB_URI=mongodb+srv://USUARIO:PASSWORD@cluster0.xxxxx.mongodb.net/ordenalink?retryWrites=true&w=majority
+   ```
+5. Levanta (si estaba corriendo en modo local, primero `make down`):
+   ```bash
+   make up-atlas     # primer plano
+   make up-atlas-d   # o en segundo plano
+   ```
+6. Comprueba: la API en http://localhost:3000/api y DbGate en http://localhost:8081 con la conexión "Mongo Atlas".
+
+Para volver a local: `make down && make up`. Si falta `MONGODB_URI`, Compose se detiene con
+`required variable MONGODB_URI is missing a value`.
+
+Para saber a qué base está conectada la API: `docker compose exec api printenv MONGODB_URI`.
+
+Los datos locales persisten entre `make down` / `make up`. `make reset` los borra y reconstruye todo.
+
+### Interfaz web de MongoDB (DbGate)
+
+Con cualquiera de los dos modos se levanta [DbGate](https://dbgate.org) en **http://localhost:8081**,
+conectado a la misma base que la API ("Mongo local" o "Mongo Atlas"). Sirve para explorar y editar
+documentos, ejecutar consultas y agregaciones, e importar/exportar datos. No existe en producción.
+En modo Atlas estás tocando datos reales: considera un usuario de Atlas de solo lectura.
+
+### Hot-reload
+
+La API corre con `nest start --watch` y el código está montado como volumen:
+al guardar un archivo en `src/` el servidor recompila y se reinicia solo.
+
+### Archivos de Docker: cuál se usa en cada comando
+
+Compose usa solo los archivos que le pasa el `Makefile` con `-f`:
+
+| Archivo | Para qué | Comando |
+|---|---|---|
+| `docker-compose.yml` | Desarrollo: API con hot-reload, Mongo local y DbGate (perfil `localdb`) | `make up` |
+| `docker-compose.atlas.yml` | Complemento que se aplica **encima** del anterior: devuelve la URI al `MONGODB_URI` del `.env` y quita la dependencia de Mongo local | `make up-atlas` |
+| `docker-compose.prod.yml` | Producción, independiente: imagen compilada, sin volúmenes, `restart: unless-stopped` | `make prod-up` |
+
+Para ver la configuración final de un modo antes de levantarlo: `docker compose -f docker-compose.yml -f docker-compose.atlas.yml config`
+(ojo: muestra las URIs con contraseña).
+
+El `Dockerfile` es multi-stage y cada compose elige la etapa con `build.target`:
+
+- `target: dev` (desarrollo) → `base → deps → dev`: instala todas las dependencias y corre `pnpm start:dev`;
+  el código entra por volumen.
+- `target: prod` (producción) → `base → deps → build` (compila a `dist/`) + `base → prod-deps` (solo dependencias
+  de producción) → `prod`: imagen limpia con `node_modules` de producción y `dist/`, corre `node dist/main`.
+
+### Probar la API
+
+Rutas públicas que puedes abrir en el navegador (con datos que existan en la base):
+
+```
+http://localhost:3000/api/businesses/<slug>
+http://localhost:3000/api/categories/business/<businessId>
+http://localhost:3000/api/products/business/<businessId>
+http://localhost:3000/api/products/<productId>
 ```
 
-## Run tests
+Las rutas de administración (`/api/orders/business`, crear productos, cambiar estados…) requieren
+`Authorization: Bearer <token>`: usa Postman/Bruno/curl y obtén el token con `POST /api/auth/staff/login`.
+En `docs/analisis-backend.md` hay un flujo completo de prueba con `curl`.
+
+### Comandos útiles
+
+| Comando | Acción |
+|---|---|
+| `make up` / `make up-atlas` | Levantar en primer plano (Mongo local / Atlas) con DbGate; Ctrl+C detiene |
+| `make up-d` / `make up-atlas-d` | Levantar en segundo plano |
+| `make down` / `make restart` | Detener / reiniciar |
+| `make reset` | Borrar contenedores y volúmenes, reconstruir desde cero |
+| `make logs` / `make logs-db` | Logs de la API / MongoDB |
+| `make bash` / `make mongo-shell` | Shell en la API / `mongosh` |
+| `make install` / `make add pkg=x [dev=1]` | Instalar / añadir dependencias dentro del contenedor |
+| `make test` / `make test-e2e` / `make lint` / `make format` | Scripts de calidad |
+| `make prod-build` / `make prod-up` / `make prod-down` | Imagen de producción (`node dist/main`) |
+
+## Sin Docker
+
+La app usa el `MONGODB_URI` del `.env` tal cual, es decir **Atlas**. Para otro Mongo, cámbialo
+(p. ej. `mongodb://localhost:27017/ordenalink?directConnection=true`); el registro de negocios usa transacciones,
+así que debe ser un replica set (Atlas ya lo es).
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm install
+pnpm run start:dev   # watch mode
+pnpm run build && pnpm run start:prod
+pnpm run test
 ```
 
 ## Deployment
